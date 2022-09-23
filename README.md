@@ -70,6 +70,34 @@ You can specify the scrape URI with the `--freeswitch.scrape-uri` flag. Example:
 
 Also, you need to make sure that the exporter will be allowed by the ACL (if any), and that the password matches.
 
+## basic auth
+
+build password
+
+```shell
+htpasswd -nBC 12 '' |tr -d ':\n'
+```
+
+Creating config.yml
+Let's create a config.yml file (documentation), with the following content:
+```shell
+basic_auth_users:
+    prometheus: $2a$12$rcRim06GJMX3WUOTDXa.AOwvpWdy.Mrq2nR0Dgo53Zt0bSLpP.byy
+```
+confg.yaml file password is `prometheus`
+
+You can validate that file with promtool check web-config config.yml
+
+```shell
+$ promtool check web-config config.yml
+web.yml SUCCESS
+```
+You can add multiple users to the file.
+
+## TLS 
+
+visit promethues : https://prometheus.io/docs/guides/tls-encryption/
+
 ## Metrics
 
 The exporter will try to fetch values from the following commands:
