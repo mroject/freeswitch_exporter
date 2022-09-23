@@ -15,7 +15,7 @@ poll from [GitHub - florentchauveau/freeswitch_exporter: Prometheus exporter for
 Add metrics as below:
 
 1. `sofia gateway status`
-2. ``module status`
+2. `module status`
 3. `bridged_calls`
 4. `current_channels`
 5. `detailed_calls`
