@@ -1,6 +1,6 @@
 # FreeSWITCH Exporter for Prometheus
 
-![CI](https://github.com/florentchauveau/freeswitch_exporter/actions/workflows/build.yml/badge.svg)
+![CI](https://github.com/mroject/freeswitch_exporter/actions/workflows/build.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mroject/freeswitch_exporter)](https://goreportcard.com/report/github.com/mroject/freeswitch_exporter)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/mroject/freeswitch_exporter/LICENSE)
 
