@@ -7,7 +7,7 @@ A [FreeSWITCH](https://freeswitch.org/confluence/display/FREESWITCH/FreeSWITCH+E
 
 It communicates with FreeSWITCH using [mod_event_socket](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket).
 
-
+# Give me a star!!
 
 poll from [GitHub - florentchauveau/freeswitch_exporter: Prometheus exporter for FreeSWITCH](https://github.com/florentchauveau/freeswitch_exporter) 
 
