@@ -1,2 +1,2 @@
 basic_auth_users:
-  egoo: $2y$12$HCyINe9yTsC6M/puW8xUjeXcnkBqLL1kvXj5qIvTU2vDIf/Oq2gs6
+  prometheus: $2a$12$rcRim06GJMX3WUOTDXa.AOwvpWdy.Mrq2nR0Dgo53Zt0bSLpP.byy
