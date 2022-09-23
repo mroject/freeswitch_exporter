@@ -75,7 +75,7 @@ Also, you need to make sure that the exporter will be allowed by the ACL (if any
 build password
 
 ```shell
-htpasswd -nBC 12 '' |tr -d ':\n'
+htpasswd -n BC 12 '' |tr -d ':\n'
 ```
 
 Creating config.yml
