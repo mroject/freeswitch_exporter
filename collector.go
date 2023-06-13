@@ -26,9 +26,10 @@ import (
 // Collector implements prometheus.Collector (see below).
 // it also contains the config of the exporter.
 type Collector struct {
-	URI      string
-	Timeout  time.Duration
-	Password string
+	URI       string
+	Timeout   time.Duration
+	Password  string
+	rtpEnable bool
 
 	conn  net.Conn
 	input *bufio.Reader
@@ -169,12 +170,13 @@ var (
 )
 
 // NewCollector processes uri, timeout and methods and returns a new Collector.
-func NewCollector(uri string, timeout time.Duration, password string) (*Collector, error) {
+func NewCollector(uri string, timeout time.Duration, password string, rtpEnable bool) (*Collector, error) {
 	var c Collector
 
 	c.URI = uri
 	c.Timeout = timeout
 	c.Password = password
+	c.rtpEnable = rtpEnable
 
 	var url *url.URL
 	var err error
@@ -259,6 +261,17 @@ func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
 	if err = c.vertoMetrics(ch); err != nil {
 		return err
 	}
+
+	if c.rtpEnable {
+		if err = c.variableRtpAudioMetrics(ch); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Collector) variableRtpAudioMetrics(ch chan<- prometheus.Metric) error {
 	return nil
 }
 

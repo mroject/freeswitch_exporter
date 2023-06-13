@@ -1,6 +1,5 @@
 # FreeSWITCH Exporter for Prometheus
 
-![CI](https://github.com/florentchauveau/freeswitch_exporter/actions/workflows/build.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mroject/freeswitch_exporter)](https://goreportcard.com/report/github.com/mroject/freeswitch_exporter)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/mroject/freeswitch_exporter/LICENSE)
 
@@ -25,6 +24,8 @@ Add metrics as below:
 Add feature:
 
 1. `web.config` support tls, authorization and etc. 
+
+configuration exporter web.config visit: https://prometheus.io/docs/guides/basic-auth/
 
 ## Getting Started
 

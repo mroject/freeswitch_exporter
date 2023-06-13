@@ -1,4 +1,4 @@
-module github.com/florentchauveau/freeswitch_exporter
+module github.com/mroject/freeswitch_exporter
 
 go 1.18
 
@@ -27,11 +27,11 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.34.0 // indirect
-	github.com/prometheus/exporter-toolkit v0.7.1
+	github.com/prometheus/common v0.34.0
+	github.com/prometheus/exporter-toolkit v0.7.3
 	github.com/prometheus/procfs v0.7.3 // indirect
 	golang.org/x/net v0.0.0-20220921203646-d300de134e69
 	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
-	golang.org/x/text v0.3.7
-	google.golang.org/protobuf v1.28.0 // indirect
+	golang.org/x/text v0.3.8
+	google.golang.org/protobuf v1.30.0 // indirect
 )
