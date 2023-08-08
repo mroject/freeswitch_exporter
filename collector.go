@@ -257,6 +257,9 @@ func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
 	if err = c.codecMetrics(ch); err != nil {
 		return err
 	}
+	if err = c.registrationsMetrics(ch); err != nil {
+		return err
+	}
 
 	if err = c.vertoMetrics(ch); err != nil {
 		return err
@@ -526,6 +529,38 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 		}
 
 		ch <- ep_load
+	}
+	return nil
+}
+
+func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
+	promlogConfig := &promlog.Config{}
+	logger := promlog.New(promlogConfig)
+	response, err := c.fsCommand("api show registrations as xml")
+
+	if err != nil {
+		return err
+	}
+	rt := Result{}
+	decode := xml.NewDecoder(bytes.NewReader(response))
+	decode.CharsetReader = charset.NewReaderLabel
+	err = decode.Decode(&rt)
+	if err != nil {
+		log.Println("error: &rt", err)
+	}
+	level.Debug(logger).Log("[response]:", &rt)
+	for _, cc := range rt.Row {
+		cc_load, err := prometheus.NewConstMetric(
+			prometheus.NewDesc(namespace+"_registration_defails", "freeswitch registration status", nil, prometheus.Labels{"type": cc.Type.Text, "name": cc.Name.Text, "ikey": cc.Ikey.Text}),
+			prometheus.GaugeValue,
+			float64(1),
+		)
+
+		if err != nil {
+			return err
+		}
+
+		ch <- cc_load
 	}
 	return nil
 }
