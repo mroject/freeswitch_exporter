@@ -91,6 +91,48 @@ type Gateway struct {
 	FailedCallsOut int     `xml:"failed-calls-out"`
 }
 
+type Registrations struct {
+	XMLName  xml.Name `xml:"result"`
+	Text     string   `xml:",chardata"`
+	RowCount string   `xml:"row_count,attr"`
+	Row      []struct {
+		Text  string `xml:",chardata"`
+		RowID string `xml:"row_id,attr"`
+
+		Type struct {
+			Text string `xml:",chardata"`
+		} `xml:"type"`
+
+		RegUser struct {
+			Text string `xml:",chardata"`
+		} `xml:"reg_user"`
+		Realm struct {
+			Text string `xml:",chardata"`
+		} `xml:"realm"`
+		Token struct {
+			Text string `xml:",chardata"`
+		} `xml:"token"`
+		Url struct {
+			Text string `xml:",chardata"`
+		} `xml:"url"`
+		Expires struct {
+			Text string `xml:",chardata"`
+		} `xml:"expires"`
+		NetworkIp struct {
+			Text string `xml:",chardata"`
+		} `xml:"network_ip"`
+		NetworkPort struct {
+			Text string `xml:",chardata"`
+		} `xml:"network_port"`
+		NetworkProto struct {
+			Text string `xml:",chardata"`
+		} `xml:"network_proto"`
+		Hostname struct {
+			Text string `xml:",chardata"`
+		} `xml:"hostname"`
+	} `xml:"row"`
+}
+
 type Configuration struct {
 	XMLName     xml.Name `xml:"configuration"`
 	Text        string   `xml:",chardata"`
@@ -257,6 +299,9 @@ func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
 	if err = c.codecMetrics(ch); err != nil {
 		return err
 	}
+	if err = c.registrationsMetrics(ch); err != nil {
+		return err
+	}
 
 	if err = c.vertoMetrics(ch); err != nil {
 		return err
@@ -318,7 +363,7 @@ func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&cfgs)
 	if err != nil {
-		log.Println("error: &cfgs", err)
+		log.Println("loadModuleMetrics error: &cfgs", err)
 	}
 	level.Debug(logger).Log("[response]:", &cfgs)
 	fsLoadModules := prometheus.NewGaugeVec(
@@ -364,7 +409,7 @@ func (c *Collector) sofiaStatusMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&gw)
 	if err != nil {
-		log.Println("error: &gw", err)
+		log.Println("sofiaStatusMetrics error: &gw", err)
 	}
 	level.Debug(logger).Log("[response]:", &gw)
 	for _, gateway := range gw.Gateway {
@@ -511,7 +556,7 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&rt)
 	if err != nil {
-		log.Println("error: &rt", err)
+		log.Println("endpointMetrics error: &rt", err)
 	}
 	level.Debug(logger).Log("[response]:", &rt)
 	for _, ep := range rt.Row {
@@ -530,6 +575,38 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
+func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
+	promlogConfig := &promlog.Config{}
+	logger := promlog.New(promlogConfig)
+	response, err := c.fsCommand("api show registrations as xml")
+
+	if err != nil {
+		return err
+	}
+	rt := Registrations{}
+	decode := xml.NewDecoder(bytes.NewReader(response))
+	decode.CharsetReader = charset.NewReaderLabel
+	err = decode.Decode(&rt)
+	if err != nil {
+		log.Println("registrationsMetrics error: &rt", err)
+	}
+	level.Debug(logger).Log("[response]:", &rt)
+	for _, cc := range rt.Row {
+		cc_load, err := prometheus.NewConstMetric(
+			prometheus.NewDesc(namespace+"_registration_defails", "freeswitch registration status", nil, prometheus.Labels{"reg_user": cc.RegUser.Text, "hostname": cc.Hostname.Text, "realm": cc.Realm.Text, "token": cc.Token.Text, "url": cc.Url.Text, "expires": cc.Expires.Text, "network_ip": cc.NetworkIp.Text, "network_port": cc.NetworkPort.Text, "network_proto": cc.NetworkProto.Text}),
+			prometheus.GaugeValue,
+			float64(1),
+		)
+
+		if err != nil {
+			return err
+		}
+
+		ch <- cc_load
+	}
+	return nil
+}
+
 func (c *Collector) codecMetrics(ch chan<- prometheus.Metric) error {
 	promlogConfig := &promlog.Config{}
 	logger := promlog.New(promlogConfig)
@@ -543,7 +620,7 @@ func (c *Collector) codecMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&rt)
 	if err != nil {
-		log.Println("error: &rt", err)
+		log.Println("codecMetrics error: &rt", err)
 	}
 	level.Debug(logger).Log("[response]:", &rt)
 	for _, cc := range rt.Row {
@@ -575,7 +652,7 @@ func (c *Collector) vertoMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&vt)
 	if err != nil {
-		log.Println("error: &rt", err)
+		log.Println("vertoMetrics error: &rt", err)
 	}
 	level.Debug(logger).Log("[response]:", &vt)
 	for _, cc := range vt.Profile {
