@@ -72,6 +72,40 @@ You can specify the scrape URI with the `--freeswitch.scrape-uri` flag. Example:
 
 Also, you need to make sure that the exporter will be allowed by the ACL (if any), and that the password matches.
 
+### Multi-Target Exporter
+
+This exporter also supports the multi-target pattern. This means that instead of configuring Prometheus to hit this
+exporters `/metrics` endpoint, you would configure it to hit `/probe` instead, like the example Prometheus config below:
+
+```yaml
+scrape_configs:
+  - job_name: freeswitch
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+        - 10.0.0.1:8021 # Note you do need to include the port
+        - tcp://10.0.0.2:8021 # tcp:// is injected for you if the value does not start with it
+    metrics_path: /probe
+    relabel_configs: # This relabeling sets the instance to the target address instead of the address of the exporter
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9282
+```
+
+What this does is tell's Prometheus to do the following for each item in `static_configs.targets`:
+
+```shell
+curl http://localhost:9282/probe?target=10.0.0.1:8021
+```
+
+Then the exporter does what it would normally do and scrapes the target for metrics.
+
+Using this method can help make it a bit easier depending on the size of the platform your monitoring. For example,
+this could allow you to utilize Prometheus' discovery plugins.
+
 ## Metrics
 
 The exporter will try to fetch values from the following commands:
