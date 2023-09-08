@@ -289,6 +289,10 @@ func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
 		return err
 	}
 
+	if err = c.memoryMetrics(ch); err != nil {
+		return err
+	}
+
 	if err = c.loadModuleMetrics(ch); err != nil {
 		return err
 	}
@@ -540,6 +544,54 @@ func (c *Collector) sofiaStatusMetrics(ch chan<- prometheus.Metric) error {
 
 		ch <- pingtime
 	}
+	return nil
+}
+
+func (c *Collector) memoryMetrics(ch chan<- prometheus.Metric) error {
+	promlogConfig := &promlog.Config{}
+	logger := promlog.New(promlogConfig)
+	response, err := c.fsCommand("api memory")
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(response))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if line == "+OK" {
+			break
+		}
+
+		matches := regexp.MustCompile(`(.+?) \((.+?)\):\s+(\d+)`).FindStringSubmatch(line)
+
+		if matches == nil {
+			level.Debug(logger).Log("msg", "Cannot parse memory line", "line", line)
+			continue
+		}
+
+		help := matches[1]
+		field := matches[2]
+		value, err := strconv.ParseFloat(matches[3], 64)
+
+		if err != nil {
+			return fmt.Errorf("error parsing memory: %w", err)
+		}
+
+		metric, err := prometheus.NewConstMetric(
+			prometheus.NewDesc(namespace+"_memory_"+field, help, nil, nil),
+			prometheus.GaugeValue,
+			value,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		ch <- metric
+	}
+
 	return nil
 }
 
