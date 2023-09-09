@@ -117,6 +117,8 @@ The exporter will try to fetch values from the following commands:
 - `module`: usage module.conf.xml fetch all module status
 - `api show endpoint` all used endpoint
 - `api show codec` all used codec
+- `registration` all sofia registration details
+- `api memory` get freeswitch memory info 
 
 List of exposed metrics:
 
