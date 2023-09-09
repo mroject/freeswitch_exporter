@@ -8,9 +8,6 @@ A [FreeSWITCH](https://freeswitch.org/confluence/display/FREESWITCH/FreeSWITCH+E
 It communicates with FreeSWITCH using [mod_event_socket](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket).
 
 
-
-poll from [GitHub - florentchauveau/freeswitch_exporter: Prometheus exporter for FreeSWITCH](https://github.com/florentchauveau/freeswitch_exporter) 
-
 Add metrics as below:
 
 1. `sofia gateway status`
@@ -20,6 +17,8 @@ Add metrics as below:
 5. `detailed_calls`
 6. `endpoint`
 7. `codec`
+8. `api memory`
+9. `registration details`
 
 Add feature:
 
@@ -194,6 +193,26 @@ List of exposed metrics:
 # TYPE freeswitch_endpoint_status gauge
 # HELP freeswitch_codec_status freeswitch endpoint status
 # TYPE freeswitch_codec_status gauge
+# HELP freeswitch_memory_arena Total non-mmapped bytes
+# TYPE freeswitch_memory_arena gauge
+# HELP freeswitch_memory_fordblks Total free space
+# TYPE freeswitch_memory_fordblks gauge
+# HELP freeswitch_memory_fsmblks Free bytes held in fastbins
+# TYPE freeswitch_memory_fsmblks gauge
+# HELP freeswitch_memory_hblkhd Bytes in mapped regions
+# TYPE freeswitch_memory_hblkhd gauge
+# HELP freeswitch_memory_hblks # of mapped regions
+# TYPE freeswitch_memory_hblks gauge
+# HELP freeswitch_memory_keepcost Topmost releasable block
+# TYPE freeswitch_memory_keepcost gauge
+# HELP freeswitch_memory_ordblks # of free chunks
+# TYPE freeswitch_memory_ordblks gauge
+# HELP freeswitch_memory_smblks # of free fastbin blocks
+# TYPE freeswitch_memory_smblks gauge
+# HELP freeswitch_memory_uordblks Total allocated space
+# TYPE freeswitch_memory_uordblks gauge
+# HELP freeswitch_memory_usmblks Max. total allocated space
+# TYPE freeswitch_memory_usmblks gauge
 ```
 
 ## Compiling
