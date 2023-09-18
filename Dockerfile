@@ -10,7 +10,7 @@ FROM scratch
 
 COPY --from=builder /go/src/freeswitch_exporter /freeswitch_exporter
 
-LABEL author="ZhangLianjun <z0413j@outlook.com>,Florent CHAUVEAU <florentch@pm.me>"
+LABEL author="ZhangLianjun <z0413j@outlook.com>"
 
 EXPOSE 9282
 ENTRYPOINT [ "/freeswitch_exporter" ]
