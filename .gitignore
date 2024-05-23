@@ -1,5 +1,4 @@
 freeswitch_exporter
 config.yaml
 dist
-build.sh
 buildtar.sh
