@@ -7,7 +7,6 @@ A [FreeSWITCH](https://freeswitch.org/confluence/display/FREESWITCH/FreeSWITCH+E
 
 It communicates with FreeSWITCH using [mod_event_socket](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket).
 
-
 Add metrics as below:
 
 1. `sofia gateway status`
@@ -22,7 +21,7 @@ Add metrics as below:
 
 Add feature:
 
-1. `web.config` support tls, authorization and etc. 
+1. `web.config` support tls, authorization and etc.
 
 configuration exporter web.config visit: https://prometheus.io/docs/guides/basic-auth/
 
@@ -30,33 +29,36 @@ configuration exporter web.config visit: https://prometheus.io/docs/guides/basic
 
 Pre-built static binaries are available in [releases](https://github.com/mroject/freeswitch_exporter/releases).
 
-
-
 To run it:
+
 ```bash
 ./freeswitch_exporter [flags]
 ```
 
 Help on flags:
-```
-./freeswitch_exporter --help
+
+```bash
 usage: freeswitch_exporter [<flags>]
 
+
 Flags:
-      --help                   Show context-sensitive help.
-  -l, --web.listen-address=":9282"
-                               Address to listen on for web interface and telemetry.
-      --web.telemetry-path="/metrics"
+  -h, --[no-]help              Show context-sensitive help (also try --help-long and --help-man).
+      --web.listen-address=:9282 ...  
+                               Addresses on which to expose metrics and web interface. Repeatable for multiple addresses.
+      --web.config.file=""     Path to configuration file that can enable TLS or authentication. See:
+                               https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
+      --web.telemetry-path="/metrics"  
                                Path under which to expose metrics.
-  -u, --freeswitch.scrape-uri="tcp://localhost:8021"
-                               URI on which to scrape freeswitch. E.g.
-                               "tcp://localhost:8021"
+  -u, --freeswitch.scrape-uri="tcp://localhost:8021"  
+                               URI on which to scrape freeswitch. E.g. "tcp://localhost:8021"
   -t, --freeswitch.timeout=5s  Timeout for trying to get stats from freeswitch.
-  -P, --freeswitch.password="ClueCon"
+  -P, --freeswitch.password="ClueCon"  
                                Password for freeswitch event socket.
-      --web.config=""          [EXPERIMENTAL] Path to config yaml file that can
-                               enable TLS or authentication.
-      --version                Show application version.
+      --[no-]rtp.enable        enable rtp info(feature:todo!), default: false
+      --[no-]probe.enable      enable probe handler
+      --log.level=info         Only log messages with the given severity or above. One of: [debug, info, warn, error]
+      --log.format=logfmt      Output format of log messages. One of: [logfmt, json]
+      --[no-]version           Show application version.
 ```
 
 ## Usage
@@ -65,7 +67,7 @@ Make sure [mod_event_socket](https://freeswitch.org/confluence/display/FREESWITC
 
 You can specify the scrape URI with the `--freeswitch.scrape-uri` flag. Example:
 
-```
+```bash
 ./freeswitch_exporter -u "tcp://localhost:8021"
 ```
 
@@ -232,4 +234,3 @@ Dependencies will be fetched automatically.
 Feel free to send pull requests.
 
 Copyright (c) 2022 Zhang Lian Jun <z0413j@outlook.com>
-

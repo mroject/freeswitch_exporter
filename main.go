@@ -1,22 +1,45 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promlog/flag"
+	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
-	"gopkg.in/alecthomas/kingpin.v2"
+	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 )
 
+const app = "freeswitch_exporter"
+
+var totalScrapes = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Namespace: namespace,
+	Name:      "exporter_total_scrapes",
+	Help:      "Current total freeswitch scrapes.",
+}, []string{"status"})
+
+func init() {
+	prometheus.MustRegister(versioncollector.NewCollector(app))
+	prometheus.MustRegister(totalScrapes)
+}
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	var (
-		listenAddress = kingpin.Flag(
-			"web.listen-address",
-			"Address to listen on for web interface and telemetry.").Short('l').Default(":9282").String()
+		toolkitFlags = webflag.AddFlags(kingpin.CommandLine, ":9282")
+
 		metricsPath = kingpin.Flag(
 			"web.telemetry-path",
 			"Path under which to expose metrics.").Default("/metrics").String()
@@ -29,44 +52,68 @@ func main() {
 		password = kingpin.Flag(
 			"freeswitch.password",
 			"Password for freeswitch event socket.").Short('P').Default("ClueCon").String()
-		configFile = kingpin.Flag(
-			"web.config",
-			"[EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.",
-		).Default("").String()
-		rtpEnable = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: fasle").Default("false").Bool()
+		rtpEnable   = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: false").Default("false").Bool()
+		probeEnable = kingpin.Flag("probe.enable", "enable probe handler /probe").Default("false").Bool()
 	)
 	promlogConfig := &promlog.Config{}
-	kingpin.Version("freeswitch_exporter\nversion: 1.0.4")
-	logger := promlog.New(promlogConfig)
+	flag.AddFlags(kingpin.CommandLine, promlogConfig)
+	kingpin.Version(version.Print(app))
+	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	logger := promlog.New(promlogConfig)
 
-	c, err := NewCollector(*scrapeURI, *timeout, *password, *rtpEnable)
-
-	if err != nil {
-		panic(err)
+	if *probeEnable {
+		http.HandleFunc("/probe", func(w http.ResponseWriter, r *http.Request) {
+			probeHandler(w, r, logger, *timeout, nil)
+		})
+	} else {
+		c, err := NewCollector(*scrapeURI, *timeout, *password, *rtpEnable, logger)
+		if err != nil {
+			level.Error(logger).Log("msg", "error creating collector", "err", err)
+			return 1
+		}
+		prometheus.MustRegister(c)
 	}
 
-	prometheus.MustRegister(c)
-
 	http.Handle(*metricsPath, promhttp.Handler())
+	http.HandleFunc("/-/healthy", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Healthy"))
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<html>
 			<head><title>FreeSWITCH Exporter</title></head>
 			<body>
 			<h1>FreeSWITCH Exporter</h1>
 			<p><a href="` + *metricsPath + `">Metrics</a></p>
-			</body>
+			`))
+		if *probeEnable {
+			fmt.Fprint(w, `<p><a href="probe?target=tcp://localhost:8021&password=ClueCon">Probe localhost:8021 with password "ClueCon"</a></p>`)
+		}
+		w.Write([]byte(`</body>
 			</html>`))
 	})
 
-	server := &http.Server{Addr: *listenAddress}
-	flags := &web.FlagConfig{
-		WebListenAddresses: &[]string{*listenAddress},
-		WebSystemdSocket:   new(bool),
-		WebConfigFile:      configFile,
-	}
-	if err := web.ListenAndServe(server, flags, logger); err != nil {
-		level.Info(logger).Log("err", err)
-		os.Exit(1)
+	srv := &http.Server{}
+	srvc := make(chan struct{})
+	term := make(chan os.Signal, 1)
+	signal.Notify(term, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		if err := web.ListenAndServe(srv, toolkitFlags, logger); err != nil {
+			level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
+			close(srvc)
+		}
+	}()
+
+	for {
+		select {
+		case <-term:
+			level.Info(logger).Log("msg", "Received SIGTERM, exiting gracefully...")
+			return 0
+		case <-srvc:
+			return 1
+		}
 	}
 }
