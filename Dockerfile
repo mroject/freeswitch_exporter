@@ -1,14 +1,18 @@
 # build
-FROM golang:1.18 as builder
+FROM golang:1.22 as builder
+ARG LDFLAGS
 
-WORKDIR /go/src
-COPY . /go/src/
-RUN CGO_ENABLED=0 go build -a -o freeswitch_exporter
+WORKDIR /workspace
+COPY go.mod go.sum /workspace/
+RUN go mod download
+COPY collector.go main.go prober.go /workspace/
+
+RUN CGO_ENABLED=0 go build -a -ldflags "${LDFLAGS}" -o freeswitch_exporter
 
 # run
 FROM scratch
 
-COPY --from=builder /go/src/freeswitch_exporter /freeswitch_exporter
+COPY --from=builder /build/freeswitch_exporter /freeswitch_exporter
 
 LABEL author="ZhangLianjun <z0413j@outlook.com>"
 
