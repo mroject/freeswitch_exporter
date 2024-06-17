@@ -7,12 +7,12 @@ COPY go.mod go.sum /workspace/
 RUN go mod download
 COPY collector.go main.go prober.go /workspace/
 
-RUN CGO_ENABLED=0 go build -a -ldflags "${LDFLAGS}" -o freeswitch_exporter
+RUN CGO_ENABLED=0 go build -a -ldflags "${LDFLAGS}" -o freeswitch_exporter && ./freeswitch_exporter --version
 
 # run
 FROM scratch
 
-COPY --from=builder /build/freeswitch_exporter /freeswitch_exporter
+COPY --from=builder /workspace/freeswitch_exporter /freeswitch_exporter
 
 LABEL author="ZhangLianjun <z0413j@outlook.com>"
 
