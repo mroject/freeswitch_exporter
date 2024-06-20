@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.18 as builder
+FROM golang:1.20 as builder
 
 # Set environment variables for cross-compilation
 ENV GOARCH=amd64

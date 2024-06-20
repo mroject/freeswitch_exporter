@@ -359,6 +359,7 @@ func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
 	response, err := c.fsCommand("api xml_locate configuration configuration name modules.conf")
 
 	if err != nil {
+		level.Error(logger).Log("error", err)
 		return err
 	}
 	cfgs := Configuration{}
@@ -367,32 +368,29 @@ func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&cfgs)
 	if err != nil {
-		log.Println("loadModuleMetrics error: &cfgs", err)
+		level.Error(logger).Log("error", err)
+		return err
 	}
-	level.Debug(logger).Log("[response]:", &cfgs)
+
 	fsLoadModules := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "freeswitch_load_module",
 			Help: "freeswitch load module status",
 		},
-		[]string{
-			"module",
-		},
+		[]string{"module"},
 	)
-	//prometheus.MustRegister(fsLoadModules)
+
 	for _, m := range cfgs.Modules.Load {
 		status, err := c.fsCommand("api module_exists " + m.Module)
-
 		if err != nil {
-			return err
+			level.Error(logger).Log("module", m.Module, "error", err)
+			continue
 		}
-		load_mudule := 0
-
+		load_module := 0
 		if string(status) == "true" {
-			load_mudule = 1
+			load_module = 1
 		}
-		level.Debug(logger).Log("module", m.Module, " load status: ", string(status))
-		fsLoadModules.WithLabelValues(m.Module).Set(float64(load_mudule))
+		fsLoadModules.WithLabelValues(m.Module).Set(float64(load_module))
 	}
 	fsLoadModules.MetricVec.Collect(ch)
 	return nil
@@ -415,7 +413,7 @@ func (c *Collector) sofiaStatusMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("sofiaStatusMetrics error: &gw", err)
 	}
-	level.Debug(logger).Log("[response]:", &gw)
+	// level.Debug(logger).Log("[response]:", &gw)
 	for _, gateway := range gw.Gateway {
 		status := 0
 		if gateway.Status == "UP" {
@@ -601,6 +599,7 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 	response, err := c.fsCommand("api show endpoint as xml")
 
 	if err != nil {
+		level.Error(logger).Log("error", err)
 		return err
 	}
 	rt := Result{}
@@ -610,7 +609,7 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("endpointMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &rt)
+	// level.Debug(logger).Log("[response]:", &rt)
 	for _, ep := range rt.Row {
 		ep_load, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_endpoint_status", "freeswitch endpoint status", nil, prometheus.Labels{"type": ep.Type.Text, "name": ep.Name.Text, "ikey": ep.Ikey.Text}),
@@ -633,6 +632,7 @@ func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
 	response, err := c.fsCommand("api show registrations as xml")
 
 	if err != nil {
+		level.Error(logger).Log("error", err)
 		return err
 	}
 	rt := Registrations{}
@@ -642,7 +642,7 @@ func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("registrationsMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &rt)
+	//level.Debug(logger).Log("[response]:", &rt)
 	for _, cc := range rt.Row {
 		cc_load, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_registration_defails", "freeswitch registration status", nil, prometheus.Labels{"reg_user": cc.RegUser.Text, "hostname": cc.Hostname.Text, "realm": cc.Realm.Text, "token": cc.Token.Text, "url": cc.Url.Text, "expires": cc.Expires.Text, "network_ip": cc.NetworkIp.Text, "network_port": cc.NetworkPort.Text, "network_proto": cc.NetworkProto.Text}),
@@ -672,9 +672,10 @@ func (c *Collector) codecMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&rt)
 	if err != nil {
+		level.Error(logger).Log("error", err)
 		log.Println("codecMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &rt)
+	//level.Debug(logger).Log("[response]:", &rt)
 	for _, cc := range rt.Row {
 		cc_load, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_codec_status", "freeswitch endpoint status", nil, prometheus.Labels{"type": cc.Type.Text, "name": cc.Name.Text, "ikey": cc.Ikey.Text}),
@@ -704,9 +705,10 @@ func (c *Collector) vertoMetrics(ch chan<- prometheus.Metric) error {
 	decode.CharsetReader = charset.NewReaderLabel
 	err = decode.Decode(&vt)
 	if err != nil {
+		level.Error(logger).Log("error", err)
 		log.Println("vertoMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &vt)
+	//level.Debug(logger).Log("[response]:", &vt)
 	for _, cc := range vt.Profile {
 		vt_status := 0
 		if cc.State.Text == "RUNNING" {

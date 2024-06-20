@@ -11,3 +11,11 @@ docker cp temp_container:/freeswitch_exporter ./freeswitch_exporter
 
 # Stop and remove the temporary container
 docker rm -f temp_container
+
+# Create a tar.gz archive of the freeswitch_exporter
+tar -czvf freeswitch_exporter.tar.gz freeswitch_exporter
+
+# Optional: Remove the copied binary to clean up
+rm ./freeswitch_exporter
+
+echo "freeswitch_exporter.tar.gz has been created successfully."
