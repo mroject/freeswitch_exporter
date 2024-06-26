@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,6 +33,34 @@ func init() {
 
 func main() {
 	os.Exit(run())
+}
+
+func newLandingPage(metricsPath, healthzPath, probePath string, probeEnable bool) (http.Handler, error) {
+	landingConfig := web.LandingConfig{
+		Name:        app,
+		Description: "exporter for freeswitch",
+		Version:     version.Info(),
+		Links: []web.LandingLinks{
+			{
+				Address:     metricsPath,
+				Text:        "Metrics",
+				Description: "for self-metrics or running in single target mode",
+			},
+			{
+				Address:     healthzPath,
+				Text:        "Healthz",
+				Description: "for liveness or readiness probe",
+			},
+		},
+	}
+	if probeEnable {
+		landingConfig.Links = append(landingConfig.Links, web.LandingLinks{
+			Address:     probePath,
+			Text:        "Probe",
+			Description: "for probe handler, currently supported parameters are [target or (host and port), password]",
+		})
+	}
+	return web.NewLandingPage(landingConfig)
 }
 
 func run() int {
@@ -76,24 +103,20 @@ func run() int {
 	}
 
 	http.Handle(*metricsPath, promhttp.Handler())
-	http.HandleFunc("/-/healthy", func(w http.ResponseWriter, r *http.Request) {
+
+	healthzPath := "/-/healthy"
+	http.HandleFunc(healthzPath, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Healthy"))
 	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<html>
-			<head><title>FreeSWITCH Exporter</title></head>
-			<body>
-			<h1>FreeSWITCH Exporter</h1>
-			<p><a href="` + *metricsPath + `">Metrics</a></p>
-			`))
-		if *probeEnable {
-			fmt.Fprint(w, `<p><a href="probe?target=tcp://localhost:8021&password=ClueCon">Probe localhost:8021 with password "ClueCon"</a></p>`)
-		}
-		w.Write([]byte(`</body>
-			</html>`))
-	})
+
+	landingPage, err := newLandingPage(*metricsPath, healthzPath, "/probe", *probeEnable)
+	if err != nil {
+		level.Error(logger).Log("err", err)
+		return 1
+	}
+
+	http.Handle("/", landingPage)
 
 	srv := &http.Server{}
 	srvc := make(chan struct{})

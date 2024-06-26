@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,11 +17,12 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 	if params == nil {
 		params = r.URL.Query()
 	}
-	target := params.Get("target")
-	if target == "" {
-		http.Error(w, "Target parameter is missing", http.StatusBadRequest)
+	target, err := getTarget(params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	timeoutSeconds, err := getTimeout(r, float64(timeout))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -39,6 +42,16 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 	h.ServeHTTP(w, r)
+}
+
+func getTarget(q url.Values) (string, error) {
+	if v := q.Get("target"); v != "" {
+		return v, nil
+	}
+	if host, port := q.Get("host"), q.Get("port"); host != "" && port != "" {
+		return "tcp://" + net.JoinHostPort(host, port), nil
+	}
+	return "", errors.New("target or host/port parameter are missing")
 }
 
 func getTimeout(r *http.Request, timeout float64) (timeoutSeconds float64, err error) {
