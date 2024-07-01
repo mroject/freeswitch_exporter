@@ -38,7 +38,7 @@ func main() {
 		rtpEnable = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: fasle").Default("false").Bool()
 	)
 	promlogConfig := &promlog.Config{}
-	kingpin.Version("freeswitch_exporter\nversion: 1.0.4")
+	kingpin.Version("freeswitch_exporter\nversion: 1.0.6")
 	logger := promlog.New(promlogConfig)
 	kingpin.Parse()
 
