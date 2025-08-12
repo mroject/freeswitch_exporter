@@ -189,6 +189,7 @@ type Verto struct {
 var (
 	metricList = []Metric{
 		{Name: "current_calls", Type: prometheus.GaugeValue, Help: "Number of calls active", Command: "api show calls count as json"},
+		{Name: "current_conferences", Type: prometheus.GaugeValue, Help: "Number of active conferences", Command: "api conference count"},
 		{Name: "detailed_bridged_calls", Type: prometheus.GaugeValue, Help: "Number of detailed_bridged_calls active", Command: "api show detailed_bridged_calls as json"},
 		{Name: "detailed_calls", Type: prometheus.GaugeValue, Help: "Number of detailed_calls active", Command: "api show detailed_calls as json"},
 		{Name: "bridged_calls", Type: prometheus.GaugeValue, Help: "Number of bridged_calls active", Command: "api show bridged_calls as json"},
@@ -795,6 +796,16 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		}
 
 		return r.Count, nil
+	case "current_conferences":
+		raw := string(response)
+
+		value, err := strconv.ParseFloat(raw, 64)
+
+		if err != nil {
+			return 0, fmt.Errorf("cannot read current_conferences response: %w", err)
+		}
+
+		return value, nil
 	case "current_channels":
 		r := struct {
 			Count float64 `json:"row_count"`
