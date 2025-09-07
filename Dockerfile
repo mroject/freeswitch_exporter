@@ -1,5 +1,5 @@
 # build
-FROM golang:1.18 as builder
+FROM golang:1.20 as builder
 
 WORKDIR /go/src
 COPY . /go/src/
