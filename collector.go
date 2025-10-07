@@ -335,7 +335,8 @@ func (c *Collector) scapeMetrics(ch chan<- prometheus.Metric) error {
 		value, err := c.fetchMetric(&metricDef)
 
 		if err != nil {
-			return err
+			log.Printf("failed to fetch metric: %s", err)
+			continue
 		}
 
 		metric, err := prometheus.NewConstMetric(
@@ -345,7 +346,8 @@ func (c *Collector) scapeMetrics(ch chan<- prometheus.Metric) error {
 		)
 
 		if err != nil {
-			return err
+			log.Printf("failed to save metric value: %s", err)
+			continue
 		}
 
 		ch <- metric
@@ -792,7 +794,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		err = json.Unmarshal(response, &r)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read JSON response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return r.Count, nil
@@ -802,7 +804,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		value, err := strconv.ParseFloat(raw, 64)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read current_conferences response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return value, nil
@@ -814,7 +816,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		err = json.Unmarshal(response, &r)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read JSON response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return r.Count, nil
@@ -826,7 +828,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		err = json.Unmarshal(response, &r)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read JSON response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return r.Count, nil
@@ -838,7 +840,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		err = json.Unmarshal(response, &r)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read JSON response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return r.Count, nil
@@ -850,7 +852,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		err = json.Unmarshal(response, &r)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read JSON response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return r.Count, nil
@@ -862,7 +864,7 @@ func (c *Collector) fetchMetric(metricDef *Metric) (float64, error) {
 		err = json.Unmarshal(response, &r)
 
 		if err != nil {
-			return 0, fmt.Errorf("cannot read JSON response: %w", err)
+			return 0, fmt.Errorf("failed read JSON response for command %s: %w", metricDef.Name, err)
 		}
 
 		return r.Count, nil
