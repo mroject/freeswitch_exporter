@@ -1,0 +1,83 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: freebsd
+            goarch: amd64
+          - goos: freebsd
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: netbsd
+            goarch: amd64
+          - goos: netbsd
+            goarch: arm64
+          - goos: openbsd
+            goarch: amd64
+          - goos: openbsd
+            goarch: arm64
+          - goos: solaris
+            goarch: amd64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Get project dependencies
+        run: go mod download
+
+      - name: Build freeswitch_exporter
+        run: |
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}  go build -o freeswitch_exporter
+
+      - name: Upload files to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeswitch_exporter-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            ./freeswitch_exporter
+
+      - name: compresee freeswitch_exporter
+        if: github.event_name == 'release'
+        run: |
+          zip freeswitch_exporter-${{ matrix.goos }}-${{ matrix.goarch }}.zip freeswitch_exporter
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        if: github.event_name == 'release'
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./freeswitch_exporter-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          tag: ${{ github.ref }}
+          file_glob: true
