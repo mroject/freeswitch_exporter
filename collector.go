@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -223,6 +224,10 @@ func NewCollector(uri string, timeout time.Duration, password string, rtpEnable 
 
 	var url *url.URL
 	var err error
+
+	if !strings.HasPrefix(c.URI, "tcp://") {
+		c.URI = fmt.Sprintf("tcp://%s", c.URI)
+	}
 
 	if url, err = url.Parse(c.URI); err != nil {
 		return nil, fmt.Errorf("cannot parse URI: %w", err)

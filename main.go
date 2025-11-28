@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -24,7 +23,7 @@ func main() {
 			"Path under which to expose metrics.").Default("/metrics").String()
 		scrapeURI = kingpin.Flag(
 			"freeswitch.scrape-uri",
-			`URI on which to scrape freeswitch. E.g. "tcp://localhost:8021"`).Short('u').Default("tcp://localhost:8021").String()
+			`URI on which to scrape freeswitch. Protocol could be omitted. E.g. "tcp://localhost:8021" or only "localhost:8021"`).Short('u').Default("tcp://localhost:8021").String()
 		timeout = kingpin.Flag(
 			"freeswitch.timeout",
 			"Timeout for trying to get stats from freeswitch.").Short('t').Default("5s").Duration()
@@ -35,7 +34,7 @@ func main() {
 			"web.config",
 			"[EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.",
 		).Default("").String()
-		rtpEnable = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: fasle").Default("false").Bool()
+		rtpEnable = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: false").Default("false").Bool()
 	)
 	promlogConfig := &promlog.Config{}
 	kingpin.Version("freeswitch_exporter\nversion: 1.0.6")
@@ -60,12 +59,6 @@ func main() {
 		if target == "" {
 			http.Error(w, "'target' query param not provided, but required.", http.StatusBadRequest)
 
-		}
-
-		// Not checking for the port to allow the port to be configured in
-		// the Prometheus scrape target config.
-		if !strings.HasPrefix(target, "tcp://") {
-			target = fmt.Sprintf("tcp://%s", target)
 		}
 
 		c, colErr := NewCollector(target, *timeout, *password, *rtpEnable)
