@@ -15,6 +15,10 @@ import (
 
 func main() {
 	var (
+		logLevel = kingpin.Flag(
+			"log.level",
+			"Log level for structured logging (debug, info, warn, error).",
+		).Default("debug").Enum("debug", "info", "warn", "error")
 		listenAddress = kingpin.Flag(
 			"web.listen-address",
 			"Address to listen on for web interface and telemetry.").Short('l').Default(":9282").String()
@@ -36,12 +40,18 @@ func main() {
 		).Default("").String()
 		rtpEnable = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: false").Default("false").Bool()
 	)
-	promlogConfig := &promlog.Config{}
 	kingpin.Version("freeswitch_exporter\nversion: 1.0.6")
-	logger := promlog.New(promlogConfig)
 	kingpin.Parse()
 
-	c, err := NewCollector(*scrapeURI, *timeout, *password, *rtpEnable)
+	promlogConfig := &promlog.Config{}
+	promlogConfig.Level = &promlog.AllowedLevel{}   // ensure level flag has a target
+	promlogConfig.Format = &promlog.AllowedFormat{} // keep format configurable
+	if err := promlogConfig.Level.Set(*logLevel); err != nil {
+		panic(fmt.Sprintf("invalid log level %q: %v", *logLevel, err))
+	}
+	logger := promlog.New(promlogConfig)
+
+	c, err := NewCollector(*scrapeURI, *timeout, *password, *rtpEnable, logger)
 
 	if err != nil {
 		panic(err)
@@ -61,7 +71,7 @@ func main() {
 
 		}
 
-		c, colErr := NewCollector(target, *timeout, *password, *rtpEnable)
+		c, colErr := NewCollector(target, *timeout, *password, *rtpEnable, logger)
 		if colErr != nil {
 			http.Error(w, fmt.Sprintf("failed to create collector for %s: %s", target, colErr), http.StatusInternalServerError)
 		}

@@ -18,9 +18,9 @@ import (
 	"sync"
 	"time"
 
+	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/promlog"
 	"golang.org/x/net/html/charset"
 )
 
@@ -31,6 +31,7 @@ type Collector struct {
 	Timeout   time.Duration
 	Password  string
 	rtpEnable bool
+	logger    kitlog.Logger
 
 	conn  net.Conn
 	input *bufio.Reader
@@ -214,13 +215,17 @@ var (
 )
 
 // NewCollector processes uri, timeout and methods and returns a new Collector.
-func NewCollector(uri string, timeout time.Duration, password string, rtpEnable bool) (*Collector, error) {
+func NewCollector(uri string, timeout time.Duration, password string, rtpEnable bool, logger kitlog.Logger) (*Collector, error) {
 	var c Collector
 
 	c.URI = uri
 	c.Timeout = timeout
 	c.Password = password
 	c.rtpEnable = rtpEnable
+	if logger == nil {
+		logger = kitlog.NewNopLogger()
+	}
+	c.logger = logger
 
 	var url *url.URL
 	var err error
@@ -362,8 +367,6 @@ func (c *Collector) scapeMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api xml_locate configuration configuration name modules.conf")
 
 	if err != nil {
@@ -377,7 +380,7 @@ func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("loadModuleMetrics error: &cfgs", err)
 	}
-	level.Debug(logger).Log("[response]:", &cfgs)
+	level.Debug(c.logger).Log("[response]:", &cfgs)
 	fsLoadModules := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "freeswitch_load_module",
@@ -399,7 +402,7 @@ func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
 		if string(status) == "true" {
 			load_mudule = 1
 		}
-		level.Debug(logger).Log("module", m.Module, " load status: ", string(status))
+		level.Debug(c.logger).Log("module", m.Module, "loadstatus:", string(status))
 		fsLoadModules.WithLabelValues(m.Module).Set(float64(load_mudule))
 	}
 	fsLoadModules.MetricVec.Collect(ch)
@@ -407,8 +410,6 @@ func (c *Collector) loadModuleMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) sofiaStatusMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api sofia xmlstatus gateway")
 
 	if err != nil {
@@ -423,13 +424,13 @@ func (c *Collector) sofiaStatusMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("sofiaStatusMetrics error: &gw", err)
 	}
-	level.Debug(logger).Log("[response]:", &gw)
+	level.Debug(c.logger).Log("[response]:", &gw)
 	for _, gateway := range gw.Gateway {
 		status := 0
 		if gateway.Status == "UP" {
 			status = 1
 		}
-		level.Debug(logger).Log("sofia ", gateway.Name, " status:", status)
+		level.Debug(c.logger).Log("sofia", gateway.Name, "status:", status)
 		fs_status, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_sofia_gateway_status", "freeswitch gateways status", nil, prometheus.Labels{"name": gateway.Name, "proxy": gateway.Proxy, "profile": gateway.Profile, "context": gateway.Context, "scheme": gateway.Scheme, "status": gateway.Status}),
 			prometheus.GaugeValue,
@@ -556,8 +557,6 @@ func (c *Collector) sofiaStatusMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) memoryMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api memory")
 	if err != nil {
 		return err
@@ -575,7 +574,7 @@ func (c *Collector) memoryMetrics(ch chan<- prometheus.Metric) error {
 		matches := regexp.MustCompile(`(.+?) \((.+?)\):\s+(\d+)`).FindStringSubmatch(line)
 
 		if matches == nil {
-			level.Debug(logger).Log("msg", "Cannot parse memory line", "line", line)
+			level.Debug(c.logger).Log("msg", "cannot parse memory line", "line", line)
 			continue
 		}
 
@@ -604,8 +603,6 @@ func (c *Collector) memoryMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api show endpoint as xml")
 
 	if err != nil {
@@ -618,7 +615,7 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("endpointMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &rt)
+	level.Debug(c.logger).Log("[response]:", &rt)
 	for _, ep := range rt.Row {
 		ep_load, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_endpoint_status", "freeswitch endpoint status", nil, prometheus.Labels{"type": ep.Type.Text, "name": ep.Name.Text, "ikey": ep.Ikey.Text}),
@@ -636,8 +633,6 @@ func (c *Collector) endpointMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api show registrations as xml")
 
 	if err != nil {
@@ -650,7 +645,7 @@ func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("registrationsMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &rt)
+	level.Debug(c.logger).Log("[response]:", &rt)
 	for _, cc := range rt.Row {
 		cc_load, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_registration_defails", "freeswitch registration status", nil, prometheus.Labels{"reg_user": cc.RegUser.Text, "hostname": cc.Hostname.Text, "realm": cc.Realm.Text, "token": cc.Token.Text, "url": cc.Url.Text, "expires": cc.Expires.Text, "network_ip": cc.NetworkIp.Text, "network_port": cc.NetworkPort.Text, "network_proto": cc.NetworkProto.Text}),
@@ -668,8 +663,6 @@ func (c *Collector) registrationsMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) codecMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api show codec as xml")
 
 	if err != nil {
@@ -682,7 +675,7 @@ func (c *Collector) codecMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("codecMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &rt)
+	level.Debug(c.logger).Log("[response]:", &rt)
 	for _, cc := range rt.Row {
 		cc_load, err := prometheus.NewConstMetric(
 			prometheus.NewDesc(namespace+"_codec_status", "freeswitch endpoint status", nil, prometheus.Labels{"type": cc.Type.Text, "name": cc.Name.Text, "ikey": cc.Ikey.Text}),
@@ -700,8 +693,6 @@ func (c *Collector) codecMetrics(ch chan<- prometheus.Metric) error {
 }
 
 func (c *Collector) vertoMetrics(ch chan<- prometheus.Metric) error {
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
 	response, err := c.fsCommand("api verto xmlstatus")
 
 	if err != nil {
@@ -714,7 +705,7 @@ func (c *Collector) vertoMetrics(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		log.Println("vertoMetrics error: &rt", err)
 	}
-	level.Debug(logger).Log("[response]:", &vt)
+	level.Debug(c.logger).Log("[response]:", &vt)
 	for _, cc := range vt.Profile {
 		vt_status := 0
 		if cc.State.Text == "RUNNING" {
