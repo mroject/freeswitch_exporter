@@ -26,11 +26,13 @@ import (
 // Collector implements prometheus.Collector (see below).
 // it also contains the config of the exporter.
 type Collector struct {
-	URI       string
-	Timeout   time.Duration
-	Password  string
-	rtpEnable bool
-	logger    kitlog.Logger
+	URI                       string
+	Timeout                   time.Duration
+	Password                  string
+	rtpEnable                 bool
+	channelDurationEnabled    bool
+	channelDurationThresholds []float64
+	logger                    kitlog.Logger
 
 	conn  net.Conn
 	input *bufio.Reader
@@ -214,13 +216,15 @@ var (
 )
 
 // NewCollector processes uri, timeout and methods and returns a new Collector.
-func NewCollector(uri string, timeout time.Duration, password string, rtpEnable bool, logger kitlog.Logger) (*Collector, error) {
+func NewCollector(uri string, timeout time.Duration, password string, rtpEnable bool, channelDurationEnabled bool, channelDurationThresholds []float64, logger kitlog.Logger) (*Collector, error) {
 	var c Collector
 
 	c.URI = uri
 	c.Timeout = timeout
 	c.Password = password
 	c.rtpEnable = rtpEnable
+	c.channelDurationEnabled = channelDurationEnabled
+	c.channelDurationThresholds = channelDurationThresholds
 	if logger == nil {
 		logger = kitlog.NewNopLogger()
 	}
@@ -319,6 +323,12 @@ func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
 
 	if c.rtpEnable {
 		if err = c.variableRtpAudioMetrics(ch); err != nil {
+			return err
+		}
+	}
+
+	if c.channelDurationEnabled {
+		if err = c.channelDurationMetrics(ch); err != nil {
 			return err
 		}
 	}

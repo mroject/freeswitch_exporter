@@ -39,7 +39,13 @@ func main() {
 			"web.config",
 			"[EXPERIMENTAL] Path to config yaml file that can enable TLS or authentication.",
 		).Default("").String()
-		rtpEnable = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: fasle").Default("false").Bool()
+		rtpEnable              = kingpin.Flag("rtp.enable", "enable rtp info(feature:todo!), default: fasle").Default("false").Bool()
+		channelDurationDisable = kingpin.Flag(
+			"freeswitch.channel-duration.disable",
+			"Disable the freeswitch_current_channels_by_duration gauge of active channel counts by age threshold.").Default("false").Bool()
+		channelDurationThresholdsFlag = kingpin.Flag(
+			"freeswitch.channel-duration.thresholds",
+			"Comma-separated, strictly increasing channel-age thresholds in seconds for freeswitch_current_channels_by_duration.").Default("30,60,120,300,600,900,1800,3600,7200,14400,21600,43200,86400,172800").String()
 	)
 	kingpin.Version("freeswitch_exporter\nversion: 1.0.6")
 	kingpin.Parse()
@@ -52,7 +58,13 @@ func main() {
 	}
 	logger := promlog.New(promlogConfig)
 
-	c, err := NewCollector(*scrapeURI, *timeout, *password, *rtpEnable, logger)
+	channelDurationThresholds, err := parseThresholds(*channelDurationThresholdsFlag)
+
+	if err != nil {
+		panic(fmt.Sprintf("invalid --freeswitch.channel-duration.thresholds: %v", err))
+	}
+
+	c, err := NewCollector(*scrapeURI, *timeout, *password, *rtpEnable, !*channelDurationDisable, channelDurationThresholds, logger)
 
 	if err != nil {
 		panic(err)
@@ -78,7 +90,7 @@ func main() {
 			target = fmt.Sprintf("tcp://%s", target)
 		}
 
-		c, colErr := NewCollector(target, *timeout, *password, *rtpEnable, logger)
+		c, colErr := NewCollector(target, *timeout, *password, *rtpEnable, !*channelDurationDisable, channelDurationThresholds, logger)
 		if colErr != nil {
 			http.Error(w, fmt.Sprintf("failed to create collector for %s: %s", target, colErr), http.StatusInternalServerError)
 		}

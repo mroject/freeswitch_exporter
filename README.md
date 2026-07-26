@@ -56,6 +56,14 @@ Flags:
                                Password for freeswitch event socket.
       --web.config=""          [EXPERIMENTAL] Path to config yaml file that can
                                enable TLS or authentication.
+      --freeswitch.channel-duration.disable
+                               Disable the
+                               freeswitch_current_channels_by_duration gauge of
+                               active channel counts by age threshold.
+      --freeswitch.channel-duration.thresholds="30,60,120,300,600,900,1800,3600,7200,14400,21600,43200,86400,172800"
+                               Comma-separated, strictly increasing
+                               channel-age thresholds in seconds for
+                               freeswitch_current_channels_by_duration.
       --version                Show application version.
 ```
 
@@ -129,6 +137,8 @@ List of exposed metrics:
 # TYPE freeswitch_current_calls gauge
 # HELP freeswitch_current_channels Number of channels active
 # TYPE freeswitch_current_channels gauge
+# HELP freeswitch_current_channels_by_duration Number of currently active FreeSWITCH channels whose age is >= threshold_seconds, observed at scrape time.
+# TYPE freeswitch_current_channels_by_duration gauge
 # HELP freeswitch_current_idle_cpu CPU idle
 # TYPE freeswitch_current_idle_cpu gauge
 # HELP freeswitch_current_sessions Number of sessions active
